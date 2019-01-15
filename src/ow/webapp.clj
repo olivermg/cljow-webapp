@@ -1,11 +1,10 @@
 (ns ow.webapp
   (:require [org.httpkit.server :as hk]
             [ring.middleware.defaults :as rmd]
-            [bidi.bidi :as b]
-            [liberator.core :as lc]))
+            [bidi.bidi :as b]))
 
-(defrecord Webapp [routes resource-creators middleware-wrapper httpkit-options
-                   resources server])
+(defrecord Webapp [routes resources middleware-wrapper httpkit-options
+                   server])
 
 (defn- app-handler [{:keys [routes resources] :as this} req]
   (let [{:keys [handler]} (some-> (b/match-route routes (:uri req))
@@ -15,19 +14,15 @@
       {:status 404
        :body "resource not found"})))
 
-(defn webapp [routes resource-creators & {:keys [middleware-wrapper httpkit-options]}]
+(defn webapp [routes resources & {:keys [middleware-wrapper httpkit-options]}]
   (map->Webapp {:routes routes
-                :resource-creators resource-creators
+                :resources resources
                 :middleware-wrapper middleware-wrapper
                 :httpkit-options httpkit-options}))
 
-(defn start [{:keys [server resource-creators middleware-wrapper httpkit-options] :as this}]
+(defn start [{:keys [server resources middleware-wrapper httpkit-options] :as this}]
   (if-not server
-    (let [resources (into {} (map (fn [[id rcreator]]
-                                    [id (rcreator this)]))
-                          resource-creators)
-          this (assoc this :resources resources)
-          server (hk/run-server
+    (let [server (hk/run-server
                   ((or middleware-wrapper identity) (partial app-handler this))
                   (merge {:port 8080
                           :worker-name-prefix "httpkit-worker-"}
@@ -39,5 +34,4 @@
   (when server
     (server))
   (assoc this
-         :server nil
-         :resources nil))
+         :server nil))

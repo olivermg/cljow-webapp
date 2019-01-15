@@ -11,7 +11,6 @@
                  [cljow-app "0.1.0-SNAPSHOT"]
                  [http-kit "2.3.0"]
                  [ring/ring-defaults "0.3.2"]
-                 [bidi "2.1.5"]
-                 [liberator "0.15.2"]]
+                 [bidi "2.1.5"]]
 
   :repl-options {:init-ns ow.webapp})
