@@ -2,7 +2,7 @@
   (:require [ring.middleware.defaults :as rmd]
             [ring.middleware.gzip :as rmg]))
 
-(defn- api-middleware [defaults handler]
+(defn- api-middleware* [defaults handler]
   (-> handler
       (rmd/wrap-defaults defaults)
       (rmg/wrap-gzip)))
