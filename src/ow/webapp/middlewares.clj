@@ -1,9 +1,11 @@
 (ns ow.webapp.middlewares
-  (:require [ring.middleware.defaults :as rmd]
+  (:require [muuntaja.middleware :as mm]
+            [ring.middleware.defaults :as rmd]
             [ring.middleware.gzip :as rmg]))
 
 (defn- api-middleware* [defaults handler]
   (-> handler
+      (mm/wrap-format)
       (rmd/wrap-defaults defaults)
       (rmg/wrap-gzip)))
 
@@ -16,6 +18,7 @@
 
 (defn- site-middleware* [defaults handler]
   (-> handler
+      (mm/wrap-format)
       (rmd/wrap-defaults defaults)
       (rmg/wrap-gzip)))
 
