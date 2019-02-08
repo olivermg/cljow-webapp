@@ -1,5 +1,22 @@
-(ns ow.webapp.resource-wrappers
-  (:require [clojure.spec.alpha :as s]))
+(ns ow.webapp.resources
+  (:require [clojure.spec.alpha :as s]
+            [io.clojure.liberator-transit]  ;; needs to be loaded for liberator to support transit
+            [liberator.core :as lc]))
+
+;;;
+;;; default liberator resource maps
+;;;
+
+(def default-web-resource {:allowed-methods #{:get}
+                           :available-media-types #{"text/html"}})
+
+(def default-api-resource {:allowed-methods #{:get}
+                           :available-media-types #{"application/json" "application/edn"
+                                                    "application/transit+json" "application/transit+msgpack"}})
+
+;;;
+;;; wrappers
+;;;
 
 (defn wrap-resource-with-request-spec [resource spec & {:keys [body-getter conformed-kw]}]
   (let [body-getter  (or body-getter :body-params)

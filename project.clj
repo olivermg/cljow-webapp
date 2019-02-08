@@ -9,11 +9,12 @@
 
   :dependencies [[bk/ring-gzip "0.3.0"]
                  [cljow-app "0.1.0-SNAPSHOT"]
+                 [com.cognitect/transit-clj "0.8.313"]
                  [http-kit "2.3.0"]
+                 [io.clojure/liberator-transit "0.3.1" :exclusions [com.cognitect/transit-clj]]
+                 [liberator "0.15.2"]
                  [org.clojure/clojure "1.10.0"]
                  [org.clojure/tools.logging "0.4.1"]
                  [metosin/muuntaja "0.6.3"]
                  [ring/ring-defaults "0.3.2"]
-                 [bidi "2.1.5"]]
-
-  :repl-options {:init-ns ow.webapp})
+                 [bidi "2.1.5"]])
