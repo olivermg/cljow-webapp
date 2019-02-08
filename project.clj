@@ -8,7 +8,7 @@
             :url "https://www.eclipse.org/legal/epl-2.0/"}
 
   :dependencies [[bk/ring-gzip "0.3.0"]
-                 [cljow-app "0.1.0-SNAPSHOT"]
+                 #_[cljow-app "0.1.0-SNAPSHOT"]
                  [com.cognitect/transit-clj "0.8.313"]
                  [http-kit "2.3.0"]
                  [io.clojure/liberator-transit "0.3.1" :exclusions [com.cognitect/transit-clj]]
