@@ -3,6 +3,14 @@
             [org.httpkit.server :as hk]
             [ow.app.lifecycle :as owl]))
 
+(defn- app-handler [{:keys [routes resources] :as this} req]
+  (let [{:keys [handler]} (some-> (b/match-route routes (:uri req))
+                                  (update :handler #(get resources %)))]
+    (if handler
+      (handler req)
+      {:status 404
+       :body "resource not found"})))
+
 (defrecord Webapp [routes resources middleware httpkit-options
                    server]
 
@@ -23,14 +31,6 @@
       (server))
     (assoc this
            :server nil)))
-
-(defn- app-handler [{:keys [routes resources] :as this} req]
-  (let [{:keys [handler]} (some-> (b/match-route routes (:uri req))
-                                  (update :handler #(get resources %)))]
-    (if handler
-      (handler req)
-      {:status 404
-       :body "resource not found"})))
 
 (defn webapp [routes resources & {:keys [middleware httpkit-options]}]
   (map->Webapp {:routes routes
