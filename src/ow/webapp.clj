@@ -1,9 +1,28 @@
 (ns ow.webapp
-  (:require [org.httpkit.server :as hk]
-            [bidi.bidi :as b]))
+  (:require [bidi.bidi :as b]
+            [org.httpkit.server :as hk]
+            [ow.app.lifecycle :as owl]))
 
 (defrecord Webapp [routes resources middleware httpkit-options
-                   server])
+                   server]
+
+  owl/Lifecycle
+
+  (start [this]
+    (if-not server
+      (let [server (hk/run-server
+                    ((or middleware identity) (partial app-handler this))
+                    (merge {:port 8080
+                            :worker-name-prefix "httpkit-worker-"}
+                           httpkit-options))]
+        (assoc this :server server))
+      this))
+
+  (stop [this]
+    (when server
+      (server))
+    (assoc this
+           :server nil)))
 
 (defn- app-handler [{:keys [routes resources] :as this} req]
   (let [{:keys [handler]} (some-> (b/match-route routes (:uri req))
@@ -18,19 +37,3 @@
                 :resources resources
                 :middleware middleware
                 :httpkit-options httpkit-options}))
-
-(defn start [{:keys [server resources middleware httpkit-options] :as this}]
-  (if-not server
-    (let [server (hk/run-server
-                  ((or middleware identity) (partial app-handler this))
-                  (merge {:port 8080
-                          :worker-name-prefix "httpkit-worker-"}
-                         httpkit-options))]
-      (assoc this :server server))
-    this))
-
-(defn stop [{:keys [server] :as this}]
-  (when server
-    (server))
-  (assoc this
-         :server nil))
