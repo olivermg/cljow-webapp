@@ -9,7 +9,7 @@
   (let [{:keys [handler]} (some-> (b/match-route routes (:uri req))
                                   (update :handler #(get resources %)))]
     (if handler
-      (handler (assoc req ::this parent))
+      (handler (assoc req ::this (or parent this)))
       {:status 404
        :body "resource not found"})))
 
