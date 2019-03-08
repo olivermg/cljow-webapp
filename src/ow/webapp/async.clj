@@ -18,15 +18,10 @@
 
 (defn- response-handler [{:keys [response-channel pending-channels] :as this} middleware-instance
                          {{:keys [::request-id] :as request} :http/request response :http/response :as msg}]
-  (try
-    (when-let [[ch orig-req] (get @pending-channels request-id)]
-      (when (hk/open? ch)
-        (hk/send! ch (middleware-instance (assoc orig-req ::captured-response response))))
-      (swap! pending-channels #(dissoc % request-id)))
-    (catch Exception e
-      (log/warn "EXCEPTION while processing response" msg e))
-    (catch Error e
-      (log/warn "ERROR while processing response" msg e))))
+  (when-let [[ch orig-req] (get @pending-channels request-id)]
+    (when (hk/open? ch)
+      (hk/send! ch (middleware-instance (assoc orig-req ::captured-response response))))
+    (swap! pending-channels #(dissoc % request-id))))
 
 (defn- storing-request-handler [{:keys [::captured-request] :as req}]
   (if captured-request
@@ -51,7 +46,8 @@
                                       httpkit-options)]
             (a/go-loop [msg (a/<! in-pipe)]
               (when-not (nil? msg)
-                (response-handler this (middleware retrieving-request-handler) msg)
+                (future
+                  (response-handler this (middleware retrieving-request-handler) msg))
                 (recur (a/<! in-pipe))))
             (assoc this :server server :in-pipe in-pipe)))
       this))

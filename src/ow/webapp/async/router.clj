@@ -5,16 +5,11 @@
             [ow.app.lifecycle :as owl]))
 
 (defn- handle [{:keys [routes response-channel resource-channel] :as this} {:keys [:http/request] :as msg}]
-  (try
-    (let [{:keys [handler]} (b/match-route routes (:uri request))]
-      (if handler
-        (a/put! resource-channel (assoc msg :http/resource handler))
-        (a/put! response-channel (assoc msg :http/response {:status 404
-                                                            :body "resource not found"}))))
-    (catch Exception e
-      (log/warn "EXCEPTION while processing request" msg e))
-    (catch Error e
-      (log/warn "ERROR while processing request" msg e))))
+  (let [{:keys [handler]} (b/match-route routes (:uri request))]
+    (if handler
+      (a/put! resource-channel (assoc msg :http/resource handler))
+      (a/put! response-channel (assoc msg :http/response {:status 404
+                                                          :body "resource not found"})))))
 
 (defrecord Router [request-channel response-channel resource-channel routes
                    in-pipe]
@@ -27,7 +22,8 @@
           (let [in-pipe (a/pipe request-channel (a/chan))]
             (a/go-loop [msg (a/<! in-pipe)]
               (when-not (nil? msg)
-                (handle this msg)
+                (future
+                  (handle this msg))
                 (recur (a/<! in-pipe))))
             (assoc this :in-pipe in-pipe)))
       this))
