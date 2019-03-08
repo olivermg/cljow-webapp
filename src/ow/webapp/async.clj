@@ -13,19 +13,20 @@
           req-after-middlewares (atom req)]
       (middleware-instance (assoc req ::captured-request req-after-middlewares))
       (swap! pending-channels #(assoc % request-id [ch req]))   ;; TODO: remove stale channels periodically
-      (a/put! request-channel @req-after-middlewares)
+      (a/put! request-channel {:http/request @req-after-middlewares})
       nil)))
 
-(defn- response-handler [{:keys [response-channel pending-channels] :as this} middleware-instance {:keys [::request-id] :as res}]
+(defn- response-handler [{:keys [response-channel pending-channels] :as this} middleware-instance
+                         {{:keys [::request-id] :as request} :http/request response :http/response :as msg}]
   (try
-    (when-let [[ch req] (get @pending-channels request-id)]
+    (when-let [[ch orig-req] (get @pending-channels request-id)]
       (when (hk/open? ch)
-        (hk/send! ch (middleware-instance (assoc req ::captured-response res))))
+        (hk/send! ch (middleware-instance (assoc orig-req ::captured-response response))))
       (swap! pending-channels #(dissoc % request-id)))
     (catch Exception e
-      (log/warn "EXCEPTION while processing response" res e))
+      (log/warn "EXCEPTION while processing response" msg e))
     (catch Error e
-      (log/warn "ERROR while processing response" res e))))
+      (log/warn "ERROR while processing response" msg e))))
 
 (defn- storing-request-handler [{:keys [::captured-request] :as req}]
   (if captured-request
@@ -48,9 +49,9 @@
           (let [in-pipe (a/pipe response-channel (a/chan))
                 server (hk/run-server (partial request-handler this (middleware storing-request-handler))
                                       httpkit-options)]
-            (a/go-loop [response (a/<! in-pipe)]
-              (when-not (nil? response)
-                (response-handler this (middleware retrieving-request-handler) response)
+            (a/go-loop [msg (a/<! in-pipe)]
+              (when-not (nil? msg)
+                (response-handler this (middleware retrieving-request-handler) msg)
                 (recur (a/<! in-pipe))))
             (assoc this :server server :in-pipe in-pipe)))
       this))
@@ -77,11 +78,11 @@
 #_(let [reqch (a/chan)
         resch (a/chan)
         srv    (-> (webapp reqch resch) owl/start)]
-    (a/go-loop [req (a/<! reqch)]
-      (when-not (nil? req)
-        (println "got request:" req)
+    (a/go-loop [{:keys [:http/request] :as msg} (a/<! reqch)]
+      (when-not (nil? msg)
+        (println "got msg:" msg)
         (Thread/sleep 1000)
-        (a/put! resch (assoc req :status 201 :body "yeah!"))
+        (a/put! resch (assoc msg :http/response {:status 201 :body "yeah!"}))
         (recur (a/<! reqch))))
     (Thread/sleep 15000)
     (owl/stop srv)
