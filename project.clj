@@ -1,4 +1,4 @@
-(defproject cljow-webapp "0.1.0-SNAPSHOT"
+(defproject cljow-webapp "0.1.1-SNAPSHOT"
 
   :description "Handling webapps & their lifecycles in a uniform way"
 

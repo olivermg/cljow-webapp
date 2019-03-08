@@ -1,4 +1,4 @@
-(ns ow.webapp
+(ns ow.webapp.sync
   (:require [bidi.bidi :as b]
             [clojure.tools.logging :as log]
             [org.httpkit.server :as hk]
@@ -19,7 +19,7 @@
 
   (start [this]
     (if-not server
-      (do (log/info "Starting ow.webapp.Webapp")
+      (do (log/info "Starting ow.webapp.sync.Webapp")
           (let [server (hk/run-server
                         ((or middleware identity) (partial app-handler this))
                         httpkit-options)]
@@ -28,7 +28,7 @@
 
   (stop [this]
     (when server
-      (log/info "Stopping ow.webapp.Webapp")
+      (log/info "Stopping ow.webapp.sync.Webapp")
       (server))
     (assoc this :server nil)))
 
@@ -37,5 +37,5 @@
                 :resources resources
                 :middleware (or middleware identity)
                 :httpkit-options (merge {:port 8080
-                                         :worker-name-prefix "webapp-worker-"}
+                                         :worker-name-prefix "sync-webapp-worker-"}
                                         httpkit-options)}))

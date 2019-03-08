@@ -1,4 +1,4 @@
-(ns ow.webapp.middlewares
+(ns ow.webapp.common.middlewares
   (:require [muuntaja.middleware :as mm]
             [ring.middleware.defaults :as rmd]
             [ring.middleware.gzip :as rmg]))

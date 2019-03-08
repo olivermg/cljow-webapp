@@ -1,4 +1,4 @@
-(ns ow.webapp.resources
+(ns ow.webapp.common.resources
   (:require [clojure.spec.alpha :as s]
             [io.clojure.liberator-transit]  ;; needs to be loaded for liberator to support transit
             [liberator.core :as lc]))
