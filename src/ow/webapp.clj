@@ -22,9 +22,7 @@
       (do (log/info "Starting ow.webapp.Webapp")
           (let [server (hk/run-server
                         ((or middleware identity) (partial app-handler this))
-                        (merge {:port 8080
-                                :worker-name-prefix "httpkit-worker-"}
-                               httpkit-options))]
+                        httpkit-options)]
             (assoc this :server server)))
       this))
 
@@ -37,5 +35,7 @@
 (defn webapp [routes resources & {:keys [middleware httpkit-options]}]
   (map->Webapp {:routes routes
                 :resources resources
-                :middleware middleware
-                :httpkit-options httpkit-options}))
+                :middleware (or middleware identity)
+                :httpkit-options (merge {:port 8080
+                                         :worker-name-prefix "webapp-worker-"}
+                                        httpkit-options)}))
