@@ -3,7 +3,7 @@
             [org.httpkit.server :as hk]
             [ow.app.lifecycle :as owl]
             [ow.app.messaging :as owm]
-            [ow.app.messaging.component-async :as owc]))
+            [ow.app.messaging.component :as owc]))
 
 (defn- request-handler [middleware-instance
                         {:keys [messaging-component pending-channels] :as this}

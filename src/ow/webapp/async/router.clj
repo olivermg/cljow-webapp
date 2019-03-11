@@ -3,7 +3,7 @@
             [clojure.tools.logging :as log]
             [ow.app.lifecycle :as owl]
             [ow.app.messaging :as owm]
-            [ow.app.messaging.component-async :as owc]))
+            [ow.app.messaging.component :as owc]))
 
 (defn- handle [routes this msg]
   (let [{:keys [uri] :as request} (owm/get-data msg)
