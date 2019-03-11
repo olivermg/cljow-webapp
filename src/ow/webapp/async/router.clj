@@ -15,7 +15,7 @@
                                                       :body "resource not found"})))))
 
 (defn router [in-ch out-ch routes]
-  (owc/component in-ch out-ch :http/request (partial handle routes)))
+  (owc/component "router-async" in-ch out-ch :http/request (partial handle routes)))
 
 
 

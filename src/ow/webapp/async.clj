@@ -19,9 +19,7 @@
       (owm/put! messaging-component msg)
       nil)))
 
-(defn- response-handler [middleware-instance
-                         {:keys [messaging-component pending-channels] :as this}
-                         msg]
+(defn- response-handler [middleware-instance pending-channels messaging-component msg]
   (let [flow-id (owm/get-flow-id msg)
         response (owm/get-data msg)]
     (when-let [[ch orig-req] (get @pending-channels flow-id)]
@@ -51,7 +49,8 @@
                                       httpkit-options)]
             (assoc this
                    :server server
-                   :messaging-component (owl/start messaging-component))))))
+                   :messaging-component (owl/start messaging-component))))
+      this))
 
   (stop [this]
     (when server
@@ -62,24 +61,27 @@
            :messaging-component (owl/stop messaging-component))))
 
 (defn webapp [in-ch out-ch & {:keys [middleware httpkit-options]}]
-  (let [mc (owc/component "webapp-async" in-ch out-ch :http/response (partial response-handler (middleware retrieving-request-handler)))]
+  (let [middleware (or middleware identity)
+        pending-channels (atom {})
+        partial-handler (partial response-handler (middleware retrieving-request-handler) pending-channels)
+        mc (owc/component "webapp-async" in-ch out-ch :http/response partial-handler)]
     (map->Webapp {:messaging-component mc
-                  :middleware (or middleware identity)
+                  :middleware middleware
                   :httpkit-options (merge {:port 8080
                                            :worker-name-prefix "async-webapp-worker-"}
                                           httpkit-options)
-                  :pending-channels (atom {})})))
+                  :pending-channels pending-channels})))
 
 
 
 #_(let [reqch (a/chan)
         resch (a/chan)
-        srv    (-> (webapp reqch resch) owl/start)]
-    (a/go-loop [{:keys [:http/request] :as msg} (a/<! reqch)]
+        srv    (-> (webapp resch reqch) owl/start)]
+    (a/go-loop [msg (a/<! reqch)]
       (when-not (nil? msg)
         (println "got msg:" msg)
         (Thread/sleep 1000)
-        (a/put! resch (assoc msg :http/response {:status 201 :body "yeah!"}))
+        (a/put! resch (owm/message msg :http/response {:status 201 :body "yeah!"}))
         (recur (a/<! reqch))))
     (Thread/sleep 15000)
     (owl/stop srv)
