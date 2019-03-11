@@ -1,6 +1,5 @@
 (ns ow.webapp.async
-  (:require [clojure.core.async :as a]
-            [clojure.tools.logging :as log]
+  (:require [clojure.tools.logging :as log]
             [org.httpkit.server :as hk]
             [ow.app.lifecycle :as owl]
             [ow.app.messaging :as owm]
@@ -74,16 +73,17 @@
 
 
 
-#_(let [reqch (a/chan)
-        resch (a/chan)
-        srv    (-> (webapp resch reqch) owl/start)]
-    (a/go-loop [msg (a/<! reqch)]
-      (when-not (nil? msg)
-        (println "got msg:" msg)
-        (Thread/sleep 1000)
-        (a/put! resch (owm/message msg :http/response {:status 201 :body "yeah!"}))
-        (recur (a/<! reqch))))
-    (Thread/sleep 15000)
-    (owl/stop srv)
-    (a/close! resch)
-    (a/close! reqch))
+#_(do (require '[clojure.core.async :as a])
+      (let [reqch (a/chan)
+            resch (a/chan)
+            srv    (-> (webapp resch reqch) owl/start)]
+        (a/go-loop [msg (a/<! reqch)]
+          (when-not (nil? msg)
+            (println "got msg:" msg)
+            (Thread/sleep 1000)
+            (a/put! resch (owm/message msg :http/response {:status 201 :body "yeah!"}))
+            (recur (a/<! reqch))))
+        (Thread/sleep 15000)
+        (owl/stop srv)
+        (a/close! resch)
+        (a/close! reqch)))

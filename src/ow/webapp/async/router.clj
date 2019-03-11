@@ -1,6 +1,5 @@
 (ns ow.webapp.async.router
   (:require [bidi.bidi :as b]
-            [clojure.core.async :as a]
             [clojure.tools.logging :as log]
             [ow.app.lifecycle :as owl]
             [ow.app.messaging :as owm]
@@ -19,7 +18,8 @@
 
 
 
-#_(do (require '[ow.webapp.async :as wa])
+#_(do (require '[clojure.core.async :as a])
+      (require '[ow.webapp.async :as wa])
       (let [ch          (a/chan)
             mult        (a/mult ch)
 
