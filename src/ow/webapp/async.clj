@@ -16,7 +16,7 @@
           _ (middleware-instance (assoc req ::captured-request req-after-middlewares))
           msg (owm/message :http/request @req-after-middlewares)]
       (swap! pending-channels #(assoc % (owm/get-flow-id msg) [ch req]))   ;; TODO: periodically remove stale entries
-      (a/put! (:out-ch messaging-component) msg)
+      (owm/put! messaging-component msg)
       nil)))
 
 (defn- response-handler [middleware-instance

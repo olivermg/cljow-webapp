@@ -6,12 +6,12 @@
             [ow.app.messaging :as owm]
             [ow.app.messaging.component-async :as owc]))
 
-(defn- handle [routes {:keys [out-ch] :as this} msg]
+(defn- handle [routes this msg]
   (let [{:keys [uri] :as request} (owm/get-data msg)
         {:keys [handler]} (b/match-route routes uri)]
     (if handler
-      (a/put! out-ch (owm/message msg :http/resource handler))
-      (a/put! out-ch (owm/message msg :http/response {:status 404
+      (owm/put! this (owm/message msg :http/resource handler))
+      (owm/put! this (owm/message msg :http/response {:status 404
                                                       :body "resource not found"})))))
 
 (defn router [in-ch out-ch routes]
