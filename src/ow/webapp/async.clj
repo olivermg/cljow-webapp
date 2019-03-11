@@ -2,72 +2,73 @@
   (:require [clojure.core.async :as a]
             [clojure.tools.logging :as log]
             [org.httpkit.server :as hk]
-            [ow.app.lifecycle :as owl]))
+            [ow.app.lifecycle :as owl]
+            [ow.app.messaging :as owm]
+            [ow.app.messaging.component-async :as owc]))
 
-(defn- request-handler [{:keys [request-channel pending-channels] :as this} middleware-instance req]
+(defn- request-handler [middleware-instance
+                        {:keys [messaging-component pending-channels] :as this}
+                        req]
   (hk/with-channel req ch
     (hk/on-close ch (fn [status]
                       (log/debug "channel closed with status" status)))
-    (let [request-id (rand-int Integer/MAX_VALUE)
-          req (assoc req ::request-id request-id)
-          req-after-middlewares (atom req)]
-      (middleware-instance (assoc req ::captured-request req-after-middlewares))
-      (swap! pending-channels #(assoc % request-id [ch req]))   ;; TODO: remove stale channels periodically
-      (a/put! request-channel {:http/request @req-after-middlewares})
+    (let [req-after-middlewares (atom req)
+          _ (middleware-instance (assoc req ::captured-request req-after-middlewares))
+          msg (owm/message :http/request @req-after-middlewares)]
+      (swap! pending-channels #(assoc % (owm/get-flow-id msg) [ch req]))   ;; TODO: periodically remove stale entries
+      (a/put! (:out-ch messaging-component) msg)
       nil)))
 
-(defn- response-handler [{:keys [response-channel pending-channels] :as this} middleware-instance
-                         {{:keys [::request-id] :as request} :http/request response :http/response :as msg}]
-  (when-let [[ch orig-req] (get @pending-channels request-id)]
-    (when (hk/open? ch)
-      (hk/send! ch (middleware-instance (assoc orig-req ::captured-response response))))
-    (swap! pending-channels #(dissoc % request-id))))
+(defn- response-handler [middleware-instance
+                         {:keys [messaging-component pending-channels] :as this}
+                         msg]
+  (let [flow-id (owm/get-flow-id msg)
+        response (owm/get-data msg)]
+    (when-let [[ch orig-req] (get @pending-channels flow-id)]
+      (when (hk/open? ch)
+        (hk/send! ch (middleware-instance (assoc orig-req ::captured-response response))))
+      (swap! pending-channels #(dissoc % flow-id)))))
 
 (defn- storing-request-handler [{:keys [::captured-request] :as req}]
   (if captured-request
     (reset! captured-request (dissoc req ::captured-request))
     (throw (ex-info "cannot store captured request" {})))
   {:status 500
-   :body "This internal server error should not happen"})
+   :body "This internal server error should never happen"})
 
 (defn- retrieving-request-handler [{:keys [::captured-response] :as req}]
   captured-response)
 
-(defrecord Webapp [request-channel response-channel routes resources middleware httpkit-options pending-channels
-                   server in-pipe]
+(defrecord Webapp [messaging-component middleware httpkit-options pending-channels
+                   server]
 
   owl/Lifecycle
 
   (start [this]
     (if-not server
       (do (log/info "Starting ow.webapp.async.Webapp")
-          (let [in-pipe (a/pipe response-channel (a/chan))
-                server (hk/run-server (partial request-handler this (middleware storing-request-handler))
+          (let [server (hk/run-server (partial request-handler (middleware storing-request-handler) this)
                                       httpkit-options)]
-            (a/go-loop [msg (a/<! in-pipe)]
-              (when-not (nil? msg)
-                (future
-                  (response-handler this (middleware retrieving-request-handler) msg))
-                (recur (a/<! in-pipe))))
-            (assoc this :server server :in-pipe in-pipe)))
-      this))
+            (assoc this
+                   :server server
+                   :messaging-component (owl/start messaging-component))))))
 
   (stop [this]
     (when server
       (log/info "Stopping ow.webapp.async.Webapp")
       (server))
-    (when in-pipe
-      (a/close! in-pipe))
-    (assoc this :server nil :in-pipe nil)))
+    (assoc this
+           :server nil
+           :messaging-component (owl/stop messaging-component))))
 
-(defn webapp [request-channel response-channel & {:keys [middleware httpkit-options]}]
-  (map->Webapp {:request-channel request-channel
-                :response-channel response-channel
-                :middleware (or middleware identity)
-                :httpkit-options (merge {:port 8080
-                                         :worker-name-prefix "async-webapp-worker-"}
-                                        httpkit-options)
-                :pending-channels (atom {})}))
+(defn webapp [in-ch out-ch & {:keys [middleware httpkit-options]}]
+  (let [mc (owc/component "webapp-async" in-ch out-ch :http/response (partial response-handler (middleware retrieving-request-handler)))]
+    (map->Webapp {:messaging-component mc
+                  :middleware (or middleware identity)
+                  :httpkit-options (merge {:port 8080
+                                           :worker-name-prefix "async-webapp-worker-"}
+                                          httpkit-options)
+                  :pending-channels (atom {})})))
 
 
 
