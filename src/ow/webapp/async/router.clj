@@ -20,22 +20,30 @@
 
 
 #_(do (require '[ow.webapp.async :as wa])
-      (let [request-ch  (a/chan)
-            response-ch (a/chan)
-            resource-ch (a/chan)
-            webapp      (-> (wa/webapp request-ch response-ch) owl/start)
+      (let [ch          (a/chan)
+            mult        (a/mult ch)
+
+            webapp-ch   (a/tap mult (a/chan))
+            webapp      (-> (wa/webapp webapp-ch ch) owl/start)
+
             routes      ["/" [["foo" :foo]
                               ["bar" :bar]]]
-            router      (-> (router request-ch response-ch resource-ch routes) owl/start)]
-        (a/go-loop [{:keys [:http/resource] :as msg} (a/<! resource-ch)]
+            router-ch   (a/tap mult (a/chan))
+            router      (-> (router router-ch ch routes) owl/start)
+
+            test-ch     (a/tap mult (a/chan))
+            pipe        (a/pipe test-ch (a/chan))
+            pub         (a/pub pipe :ow.app.messaging/topic)
+            sub         (a/sub pub :http/resource (a/chan))]
+
+        (a/go-loop [msg (a/<! sub)]
           (when-not (nil? msg)
-            (println "got resource:" resource)
+            (println "got msg:" msg)
             (Thread/sleep 1000)
-            (a/put! response-ch (assoc msg :http/response {:status 201 :body (str "yeah, " resource "!")}))
-            (recur (a/<! resource-ch))))
+            (a/put! ch (owm/message msg :http/response {:status 201 :body (str "yeah, " (owm/get-data msg) "!")}))
+            (recur (a/<! sub))))
         (Thread/sleep 15000)
         (owl/stop router)
         (owl/stop webapp)
-        (a/close! resource-ch)
-        (a/close! response-ch)
-        (a/close! request-ch)))
+        (a/close! pipe)
+        (a/close! ch)))
