@@ -6,21 +6,19 @@
             #_[ow.app.messaging.component :as owc]
             [ow.app.request-response-component :as owrrc]))
 
-(defn- request-handler [middleware-instance
-                        {{:keys [pending-channels]} ::config :as this}
-                        http-req]
+(defn- request-handler [middleware-instance this http-req]
   (hk/with-channel http-req ch
     (hk/on-close ch (fn [status]
                       (log/debug "channel closed with status" status)))
     (let [http-req-after-middlewares (atom http-req)
           _ (middleware-instance (assoc http-req ::captured-request http-req-after-middlewares))
           sys-req (owrrc/new-request :http/request @http-req-after-middlewares)]
-      (swap! pending-channels #(assoc % (owrrc/get-id sys-req) [ch http-req]))   ;; TODO: periodically remove stale entries
       (-> (owrrc/request this sys-req)
-          #_(owrrc/wait-for-response))
+          (owrrc/handle-response #(when (hk/open? ch)
+                                    (hk/send! ch (middleware-instance (assoc http-req ::captured-response (owrrc/get-data %)))))))
       nil)))
 
-(defn- response-handler [middleware-instance pending-channels messaging-component msg]
+#_(defn- response-handler [middleware-instance pending-channels messaging-component msg]
   (let [flow-id (owm/get-flow-id msg)
         response (owm/get-data msg)]
     (when-let [[ch orig-req] (get @pending-channels flow-id)]
@@ -28,14 +26,13 @@
         (hk/send! ch (middleware-instance (assoc orig-req ::captured-response response))))
       (swap! pending-channels #(dissoc % flow-id)))))
 
-(defn- storing-request-handler [{:keys [::captured-request] :as req}]
-  (if captured-request
-    (reset! captured-request (dissoc req ::captured-request))
-    (throw (ex-info "cannot store captured request" {})))
-  {:status 500
-   :body "This internal server error should never happen"})
+(defn- capturing-handler [{:keys [::captured-request ::captured-response] :as req}]
+  (when captured-request
+    (reset! captured-request (dissoc req ::captured-request ::captured-response)))
+  (when captured-response
+    captured-response))
 
-(defn- retrieving-request-handler [{:keys [::captured-response] :as req}]
+#_(defn- retrieving-request-handler [{:keys [::captured-response] :as req}]
   captured-response)
 
 #_(defrecord Webapp [messaging-component middleware httpkit-options pending-channels
@@ -76,27 +73,25 @@
 
 
 (defn init [this name request-ch response-ch & {:keys [middleware httpkit-options]}]
-  (let [middleware (or middleware identity)
-        pending-channels (atom {})
-        partial-handler (partial response-handler (middleware retrieving-request-handler) pending-channels)]
+  (let [middleware (or middleware identity)]
     (-> this
+        (owrrc/init-requester name request-ch response-ch)
         (assoc ::config {:name name
                          :middleware middleware
-                         :httpkit-options httpkit-options
-                         :pending-channels pending-channels}
-               ::runtime {})
-        (owrrc/init-requester name request-ch response-ch))))
+                         :httpkit-options (merge {:port 8080
+                                                  :worker-name-prefix "async-webapp-worker-"}
+                                                 httpkit-options)}
+               ::runtime {}))))
 
-(defn start [{{:keys [name middleware httpkit-options pending-channels]} ::config
+(defn start [{{:keys [name middleware httpkit-options]} ::config
               {:keys [server]} ::runtime
               :as this}]
   (if-not server
     (do (log/info "Starting ow.webapp.async.Webapp")
-        (let [server (hk/run-server (partial request-handler (middleware storing-request-handler) this)
+        (let [this   (owrrc/start-requester this)
+              server (hk/run-server (partial request-handler (middleware capturing-handler) this)
                                     httpkit-options)]
-          (-> this
-              (assoc ::runtime {:server server})
-              owrrc/start-requester)))
+          (assoc this ::runtime {:server server})))
     this))
 
 (defn stop [{{:keys [name]} ::config
@@ -112,16 +107,16 @@
 
 
 #_(do (require '[clojure.core.async :as a])
-    (let [reqch  (a/chan)
-          resch  (a/chan)
-          srv    (-> {} (init "webapp-async" reqch resch) start)]
-      (a/go-loop [msg (a/<! reqch)]
-        (when-not (nil? msg)
-          (println "got msg:" msg)
+    (let [reqch   (a/chan)
+          resch   (a/chan)
+          srv     (-> {} (init "webapp-async" reqch resch) start)]
+      (a/go-loop [req (a/<! reqch)]
+        (when-not (nil? req)
+          (println "got req:" req)
           (Thread/sleep 1000)
-          (a/put! resch (owm/message msg :http/response {:status 201 :body "yeah!"}))
+          (a/put! resch (owrrc/new-response req {:status 200 :body "foo1"}))
           (recur (a/<! reqch))))
       (Thread/sleep 15000)
-      (owl/stop srv)
+      (stop srv)
       (a/close! resch)
       (a/close! reqch)))
