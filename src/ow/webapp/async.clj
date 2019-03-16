@@ -1,5 +1,6 @@
 (ns ow.webapp.async
-  (:require [clojure.tools.logging :as log]
+  (:require [clojure.core.async :as a]
+            [clojure.tools.logging :as log]
             [org.httpkit.server :as hk]
             [ow.app.lifecycle :as owl]
             #_[ow.app.messaging :as owm]
@@ -10,13 +11,14 @@
   (hk/with-channel http-req ch
     (hk/on-close ch (fn [status]
                       (log/debug "channel closed with status" status)))
-    (let [http-req-after-middlewares (atom http-req)
-          _ (middleware-instance (assoc http-req ::captured-request http-req-after-middlewares))
-          sys-req (owrrc/new-request :http/request @http-req-after-middlewares)]
-      (-> (owrrc/request this sys-req)
-          (owrrc/handle-response #(when (hk/open? ch)
-                                    (hk/send! ch (middleware-instance (assoc http-req ::captured-response (owrrc/get-data %)))))))
-      nil)))
+    (future
+      (let [http-req-after-middlewares (atom http-req)
+            _ (middleware-instance (assoc http-req ::captured-request http-req-after-middlewares))
+            sys-req (owrrc/new-request :http/request @http-req-after-middlewares)
+            response-data (-> (owrrc/request this sys-req)
+                              (owrrc/wait-for-response)
+                              (owrrc/get-data))]
+        (hk/send! ch (middleware-instance (assoc http-req ::captured-response response-data)))))))
 
 #_(defn- response-handler [middleware-instance pending-channels messaging-component msg]
   (let [flow-id (owm/get-flow-id msg)
@@ -109,14 +111,19 @@
 #_(do (require '[clojure.core.async :as a])
     (let [reqch   (a/chan)
           resch   (a/chan)
-          srv     (-> {} (init "webapp-async" reqch resch) start)]
+          srv     (-> {} (init "webapp-async" reqch resch :httpkit-options {:thread 1}) start)]
       (a/go-loop [req (a/<! reqch)]
         (when-not (nil? req)
-          (println "got req:" req)
-          (Thread/sleep 1000)
-          (a/put! resch (owrrc/new-response req {:status 200 :body "foo1"}))
+          (future
+            (println "got req:" req)
+            (Thread/sleep 1000)
+            (let [a (atom 0)]
+              (dotimes [i 100000000]
+                (swap! a inc))
+              (println @a))
+            (a/put! resch (owrrc/new-response req {:status 200 :body "foo1"})))
           (recur (a/<! reqch))))
-      (Thread/sleep 15000)
+      (Thread/sleep 20000)
       (stop srv)
       (a/close! resch)
       (a/close! reqch)))
