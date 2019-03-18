@@ -2,7 +2,7 @@
   (:require [clojure.core.async :as a]
             [clojure.tools.logging :as log]
             [org.httpkit.server :as hk]
-            [ow.app.lifecycle :as owl]
+            #_[ow.app.lifecycle :as owl]
             [ow.app.request-response-component :as owrrc]))
 
 (defn- request-handler [middleware-instance this http-req]
