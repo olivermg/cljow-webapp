@@ -22,10 +22,8 @@
   (let [{:keys [uri]} http-request
         {:keys [handler]} (b/match-route routes uri)]
     (if handler
-      (->> (owrrc/new-request :http/routed-request handler)
-           (owrrc/request this)
-           (owrrc/wait-for-response)
-           (owrrc/get-data))
+      (-> (owrrc/request this :http/routed-request handler)
+          (owrrc/wait-for-response))
       {:status 404
        :body "resource not found"})))
 

@@ -12,10 +12,8 @@
     (future
       (let [http-req-after-middlewares (atom http-req)
             _ (middleware-instance (assoc http-req ::captured-request http-req-after-middlewares))
-            sys-req (owrrc/new-request :http/request @http-req-after-middlewares)
-            response-data (-> (owrrc/request this sys-req)
-                              (owrrc/wait-for-response)
-                              (owrrc/get-data))]
+            response-data (-> (owrrc/request this :http/request @http-req-after-middlewares)
+                              (owrrc/wait-for-response))]
         (hk/send! ch (middleware-instance (assoc http-req ::captured-response response-data)))))))
 
 (defn- capturing-handler [{:keys [::captured-request ::captured-response] :as req}]
@@ -67,7 +65,7 @@
           (future
             (println "got req:" req)
             (Thread/sleep 1000)
-            (let [a (atom 0)]
+            #_(let [a (atom 0)]
               (dotimes [i 100000000]
                 (swap! a inc))
               (println @a))
