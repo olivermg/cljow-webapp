@@ -29,10 +29,10 @@
       {:status 404
        :body "resource not found"})))
 
-(defn init [this name request-ch response-ch routes]
+(defn init [this name request-ch response-ch routed-request-ch routed-response-ch routes]
   (-> this
       (owrrc/init-responder name request-ch response-ch :http/request handle)
-      (owrrc/init-requester name request-ch response-ch)
+      (owrrc/init-requester name routed-request-ch routed-response-ch)
       (assoc ::config {:routes routes}
              ::runtime {})))
 
@@ -41,46 +41,43 @@
   (if-not started?
     (do (log/info "Starting ow.webapp.async.router.Router")
         (-> this
-            (owrrc/start-responder)
+            (assoc ::runtime {:started? true})
             (owrrc/start-requester)
-            (assoc this ::runtime {:started? true})))
+            (owrrc/start-responder)))
     this))
 
 (defn stop [{{:keys [started?]} ::runtime
              :as this}]
   (-> this
-      (assoc ::runtime {})
+      (owrrc/stop-responder)
       (owrrc/stop-requester)
-      (owrrc/stop-responder)))
+      (assoc ::runtime {})))
 
 
 
 #_(do (require '[clojure.core.async :as a])
-      (require '[ow.webapp.async :as wa])
-      (let [ch          (a/chan)
-            mult        (a/mult ch)
+    (require '[ow.webapp.async :as wa])
+    (let [ch          (a/chan)
+          mult        (a/mult ch)
 
-            webapp-ch   (a/tap mult (a/chan))
-            webapp      (-> (wa/webapp webapp-ch ch) owl/start)
+          webapp      (-> {} (wa/init "webapp1" ch (a/tap mult (a/chan))) wa/start)
 
-            routes      ["/" [["foo" :foo]
-                              ["bar" :bar]]]
-            router-ch   (a/tap mult (a/chan))
-            router      (-> (router router-ch ch routes) owl/start)
+          routes      ["/" [["foo" :foo]
+                            ["bar" :bar]]]
+          router      (-> {} (init "router1" (a/tap mult (a/chan)) ch ch (a/tap mult (a/chan)) routes) start)
 
-            test-ch     (a/tap mult (a/chan))
-            pipe        (a/pipe test-ch (a/chan))
-            pub         (a/pub pipe :ow.app.messaging/topic)
-            sub         (a/sub pub :http/resource (a/chan))]
+          test-ch     (a/tap mult (a/chan))
+          pub         (a/pub test-ch (fn [r] [(get r :ow.app.request-response-component/type) (get r :ow.app.request-response-component/topic)]))
+          sub         (a/sub pub [:request :http/routed-request] (a/chan))
+          ]
 
-        (a/go-loop [msg (a/<! sub)]
-          (when-not (nil? msg)
-            (println "got msg:" msg)
-            (Thread/sleep 1000)
-            (a/put! ch (owm/message msg :http/response {:status 201 :body (str "yeah, " (owm/get-data msg) "!")}))
-            (recur (a/<! sub))))
-        (Thread/sleep 15000)
-        (owl/stop router)
-        (owl/stop webapp)
-        (a/close! pipe)
-        (a/close! ch)))
+      (a/go-loop [req (a/<! sub)]
+        (when-not (nil? req)
+          (println "got routed-request:" req)
+          (Thread/sleep 1000)
+          (a/put! ch (owrrc/new-response req {:status 201 :body (str req)}))
+          (recur (a/<! sub))))
+      (Thread/sleep 15000)
+      (stop router)
+      (wa/stop webapp)
+      (a/close! ch)))
