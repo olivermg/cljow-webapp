@@ -22,18 +22,17 @@
   (when captured-response
     captured-response))
 
-(defn init [this name request-ch response-ch & {:keys [middleware httpkit-options]}]
+(defn init [this request-ch response-ch & {:keys [middleware httpkit-options]}]
   (let [middleware (or middleware identity)]
     (-> this
-        (owrrc/init-requester name request-ch response-ch)
-        (assoc ::config {:name name
-                         :middleware middleware
+        (owrrc/init-requester request-ch response-ch)
+        (assoc ::config {:middleware middleware
                          :httpkit-options (merge {:port 8080
                                                   :worker-name-prefix "async-webapp-worker-"}
                                                  httpkit-options)}
                ::runtime {}))))
 
-(defn start [{{:keys [name middleware httpkit-options]} ::config
+(defn start [{{:keys [middleware httpkit-options]} ::config
               {:keys [server]} ::runtime
               :as this}]
   (if-not server
@@ -44,8 +43,7 @@
           (assoc this ::runtime {:server server})))
     this))
 
-(defn stop [{{:keys [name]} ::config
-             {:keys [server]} ::runtime
+(defn stop [{{:keys [server]} ::runtime
              :as this}]
   (when server
     (log/info "Stopping ow.webapp.async.Webapp")
@@ -57,9 +55,10 @@
 
 
 #_(do (require '[clojure.core.async :as a])
+    (require '[ow.app.component :as owc])
     (let [reqch   (a/chan)
           resch   (a/chan)
-          srv     (-> {} (init "webapp-async" reqch resch :httpkit-options {:thread 1}) start)]
+          srv     (-> {} (owc/init "webapp-async") (init reqch resch :httpkit-options {:thread 1}) start)]
       (a/go-loop [req (a/<! reqch)]
         (when-not (nil? req)
           (future

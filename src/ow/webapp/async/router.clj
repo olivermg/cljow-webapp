@@ -12,10 +12,10 @@
       {:status 404
        :body "resource not found"})))
 
-(defn init [this name request-ch response-ch routed-request-ch routed-response-ch routes]
+(defn init [this request-ch response-ch routed-request-ch routed-response-ch routes]
   (-> this
-      (owrrc/init-responder name request-ch response-ch :http/request handle)
-      (owrrc/init-requester name routed-request-ch routed-response-ch)
+      (owrrc/init-responder request-ch response-ch :http/request handle)
+      (owrrc/init-requester routed-request-ch routed-response-ch)
       (assoc ::config {:routes routes}
              ::runtime {})))
 
@@ -39,15 +39,22 @@
 
 
 #_(do (require '[clojure.core.async :as a])
+    (require '[ow.app.component :as owc])
     (require '[ow.webapp.async :as wa])
     (let [ch          (a/chan)
           mult        (a/mult ch)
 
-          webapp      (-> {} (wa/init "webapp1" ch (a/tap mult (a/chan))) wa/start)
+          webapp      (-> {}
+                          (owc/init "webapp1")
+                          (wa/init ch (a/tap mult (a/chan)))
+                          wa/start)
 
           routes      ["/" [["foo" :foo]
                             ["bar" :bar]]]
-          router      (-> {} (init "router1" (a/tap mult (a/chan)) ch ch (a/tap mult (a/chan)) routes) start)
+          router      (-> {}
+                          (owc/init "router1")
+                          (init (a/tap mult (a/chan)) ch ch (a/tap mult (a/chan)) routes)
+                          start)
 
           test-ch     (a/tap mult (a/chan))
           pub         (a/pub test-ch (fn [r] [(get r :ow.app.request-response-component/type) (get r :ow.app.request-response-component/topic)]))
