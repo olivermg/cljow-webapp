@@ -18,4 +18,6 @@
                  [org.clojure/clojure "1.10.0"]
                  [org.clojure/core.async "0.4.490"]
                  [org.clojure/tools.logging "0.4.1"]
-                 [ring/ring-defaults "0.3.2"]])
+                 [ring/ring-defaults "0.3.2"]]
+
+  :profiles {:dev {:dependencies [[org.slf4j/slf4j-simple "1.7.26"]]}})
