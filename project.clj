@@ -20,4 +20,5 @@
                  [org.clojure/tools.logging "0.4.1"]
                  [ring/ring-defaults "0.3.2"]]
 
-  :profiles {:dev {:dependencies [[org.slf4j/slf4j-simple "1.7.26"]]}})
+  :profiles {:dev {:dependencies [[org.apache.logging.log4j/log4j-core "2.11.2"]
+                                  [org.slf4j/slf4j-log4j12 "1.7.26"]]}})
