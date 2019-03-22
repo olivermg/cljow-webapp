@@ -6,7 +6,7 @@
 (defn init [this resource-in-ch resource-out-ch handler-topic handler]
   (-> this
       (owrrc/init-responder resource-in-ch resource-out-ch :http/routed-request handler
-                            :data-topic-fn (fn [_ {:keys [handler] :as request}] handler)
+                            :data-topic-fn (fn [_ {:keys [handler-topic] :as request}] handler-topic)
                             :data-topic handler-topic)))
 
 (defn start [this]
