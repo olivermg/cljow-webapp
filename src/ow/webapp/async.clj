@@ -2,8 +2,8 @@
   (:require [clojure.core.async :as a]
             [clojure.tools.logging :as log]
             [org.httpkit.server :as hk]
-            #_[ow.app.lifecycle :as owl]
-            [ow.app.request-response-component :as owrrc]))
+            [ow.lifecycle :as owl]
+            [ow.comm :as owc]))
 
 (defn- request-handler [middleware-instance this http-req]
   (hk/with-channel http-req ch
@@ -22,19 +22,15 @@
   (when captured-response
     captured-response))
 
-(defn init [this request-ch response-ch & {:keys [middleware httpkit-options]}]
-  (let [middleware (or middleware identity)]
-    (-> this
-        (owrrc/init-requester request-ch response-ch)
-        (assoc ::config {:middleware middleware
-                         :httpkit-options (merge {:port 8080
-                                                  :worker-name-prefix "async-webapp-worker-"}
-                                                 httpkit-options)}
-               ::runtime {}))))
+(defn construct [out-ch & {:keys [middleware httpkit-options]}]
+  (assoc this
+         ::out-ch out-ch
+         ::middleware (or middleware identity)
+         ::httpkit-options (merge {:port 8080
+                                   :worker-name-prefix "async-webapp-worker-"}
+                                  httpkit-options)))
 
-(defn start [{{:keys [middleware httpkit-options]} ::config
-              {:keys [server]} ::runtime
-              :as this}]
+(defmethod owl/start [{:keys [::middleware ::httpkit-options ::server] :as this}]
   (if-not server
     (do (log/info "Starting ow.webapp.async.Webapp")
         (let [this   (owrrc/start-requester this)
