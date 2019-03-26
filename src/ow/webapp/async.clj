@@ -43,22 +43,16 @@
 
 
 #_(do (require '[clojure.core.async :as a])
-    (require '[ow.app.component :as owc])
     (let [reqch   (a/chan)
-          resch   (a/chan)
-          srv     (-> {} (owc/init "webapp-async") (init reqch resch :httpkit-options {:thread 1}) start)]
-      (a/go-loop [req (a/<! reqch)]
-        (when-not (nil? req)
+          srv     (-> (construct reqch)
+                      owl/start)]
+      (a/go-loop [{:keys [request response-ch] :as request-map} (a/<! reqch)]
+        (when-not (nil? request-map)
           (future
-            (println "got req:" req)
+            (println "got req:" request)
             (Thread/sleep 1000)
-            #_(let [a (atom 0)]
-              (dotimes [i 100000000]
-                (swap! a inc))
-              (println @a))
-            (a/put! resch (owrrc/new-response req {:status 200 :body "foo1"})))
+            (a/put! response-ch {:status 201 :body "foobar"}))
           (recur (a/<! reqch))))
       (Thread/sleep 20000)
-      (stop srv)
-      (a/close! resch)
+      (owl/stop srv)
       (a/close! reqch)))
