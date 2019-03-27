@@ -9,7 +9,7 @@
     (let [{:keys [uri]} http-request
           {:keys [handler]} (b/match-route routes uri)]
       (if handler
-        (owc/request out-ch (assoc http-request :handler-topic handler))
+        (owc/request out-ch http-request :topic handler)
         {:status 404
          :body "resource not found"}))))
 
