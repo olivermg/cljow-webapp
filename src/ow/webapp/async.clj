@@ -2,8 +2,8 @@
   (:require [clojure.core.async :as a]
             [clojure.tools.logging :as log]
             [org.httpkit.server :as hk]
-            [ow.lifecycle :as owl]
-            [ow.comm :as owc]))
+            [ow.comm :as owc]
+            [ow.lifecycle :as owl]))
 
 (defn- request-handler [middleware-instance {:keys [::out-ch] :as this} http-req]
   (hk/with-channel http-req ch
