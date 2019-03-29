@@ -9,8 +9,10 @@
 
   :dependencies [[bidi "2.1.5"]
                  [bk/ring-gzip "0.3.0"]
+                 [buddy "2.0.0"]
                  [cljow-app "0.1.0-SNAPSHOT"]
                  [com.cognitect/transit-clj "0.8.313"]
+                 [com.fasterxml.jackson.core/jackson-databind "2.9.8"]  ;; to remove ambiguous dependencies
                  [http-kit "2.3.0"]
                  [io.clojure/liberator-transit "0.3.1" :exclusions [com.cognitect/transit-clj]]
                  [liberator "0.15.2"]

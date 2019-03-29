@@ -1,5 +1,7 @@
 (ns ow.webapp.common.middlewares
-  (:require [muuntaja.middleware :as mm]
+  (:require [buddy.auth.backends :as bbe]
+            [buddy.auth.middleware :refer [wrap-authentication]]
+            [muuntaja.middleware :as mm]
             [ring.middleware.defaults :as rmd]
             [ring.middleware.gzip :as rmg]))
 
