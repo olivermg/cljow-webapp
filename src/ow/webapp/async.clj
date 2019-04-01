@@ -28,14 +28,14 @@
                                                      :worker-name-prefix "async-webapp-worker-"}
                                                     httpkit-options)}))
 
-(defmethod owl/start ::webapp [{:keys [::middleware ::httpkit-options ::server] :as this}]
+(defmethod owl/start* ::webapp [{:keys [::middleware ::httpkit-options ::server] :as this}]
   (if-not server
     (let [server (hk/run-server (partial request-handler (middleware capturing-handler) this)
                                 httpkit-options)]
       (assoc this ::server server))
     this))
 
-(defmethod owl/stop ::webapp [{:keys [::server] :as this}]
+(defmethod owl/stop* ::webapp [{:keys [::server] :as this}]
   (when server
     (server))
   (assoc this ::server nil))
