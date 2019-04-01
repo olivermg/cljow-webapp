@@ -5,27 +5,22 @@
             [ring.middleware.defaults :as rmd]
             [ring.middleware.gzip :as rmg]))
 
-(defn- api-middleware* [defaults handler]
-  (-> handler
-      (mm/wrap-format)
-      (rmd/wrap-defaults defaults)
-      (rmg/wrap-gzip)))
-
-(defn api-middleware [handler & {:keys [test-environment?]}]
-  (api-middleware* (if-not test-environment?
+(defn make-middleware [handler & {:keys [api?
+                                         test-environment?
+                                         authentication-backend]}]
+  (let [defaults (if api?
+                   (if-not test-environment?
                      rmd/secure-api-defaults
                      rmd/api-defaults)
-                   handler))
-
-
-(defn- site-middleware* [defaults handler]
-  (-> handler
-      (mm/wrap-format)
-      (rmd/wrap-defaults defaults)
-      (rmg/wrap-gzip)))
-
-(defn site-middleware [handler & {:keys [test-environment?]}]
-  (site-middleware* (if-not test-environment?
-                      rmd/secure-site-defaults
-                      rmd/site-defaults)
-                    handler))
+                   (if-not test-environment?
+                     rmd/secure-site-defaults
+                     rmd/site-defaults))
+        wrap-auth  (if authentication-backend
+                     (fn [handler]
+                       (wrap-authentication handler authentication-backend))
+                     identity)]
+    (-> handler
+        (mm/wrap-format)
+        (rmd/wrap-defaults defaults)
+        (wrap-auth)
+        (rmg/wrap-gzip))))
