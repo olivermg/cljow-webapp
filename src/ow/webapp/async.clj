@@ -21,12 +21,12 @@
   (when captured-response
     captured-response))
 
-(defn construct [out-ch & {:keys [middleware httpkit-options]}]
-  (owl/construct ::webapp {::out-ch out-ch
-                           ::middleware (or middleware identity)
-                           ::httpkit-options (merge {:port 8080
-                                                     :worker-name-prefix "async-webapp-worker-"}
-                                                    httpkit-options)}))
+(defn construct [name out-ch & {:keys [middleware httpkit-options]}]
+  (owl/construct ::webapp name {::out-ch out-ch
+                                ::middleware (or middleware identity)
+                                ::httpkit-options (merge {:port 8080
+                                                          :worker-name-prefix "async-webapp-worker-"}
+                                                         httpkit-options)}))
 
 (defmethod owl/start* ::webapp [{:keys [::middleware ::httpkit-options ::server] :as this}]
   (if-not server

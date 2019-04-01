@@ -13,8 +13,8 @@
         {:status 404
          :body "resource not found"}))))
 
-(defn construct [in-ch out-ch routes]
-  (owc/construct in-ch (make-handler out-ch routes)))
+(defn construct [name in-ch out-ch routes]
+  (owc/construct name in-ch (make-handler out-ch routes)))
 
 
 
