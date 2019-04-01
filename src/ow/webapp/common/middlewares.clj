@@ -11,11 +11,11 @@
       (rmd/wrap-defaults defaults)
       (rmg/wrap-gzip)))
 
-(defn api-middleware [handler]
-  (api-middleware* rmd/api-defaults handler))
-
-(defn secure-api-middleware [handler]
-  (api-middleware* rmd/secure-api-defaults handler))
+(defn api-middleware [handler & {:keys [test-environment?]}]
+  (api-middleware* (if-not test-environment?
+                     rmd/secure-api-defaults
+                     rmd/api-defaults)
+                   handler))
 
 
 (defn- site-middleware* [defaults handler]
@@ -24,8 +24,8 @@
       (rmd/wrap-defaults defaults)
       (rmg/wrap-gzip)))
 
-(defn site-middleware [handler]
-  (site-middleware* rmd/site-defaults handler))
-
-(defn secure-site-middleware [handler]
-  (site-middleware* rmd/secure-site-defaults handler))
+(defn site-middleware [handler & {:keys [test-environment?]}]
+  (site-middleware* (if-not test-environment?
+                      rmd/secure-site-defaults
+                      rmd/site-defaults)
+                    handler))
