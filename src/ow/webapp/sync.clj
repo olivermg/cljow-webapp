@@ -2,7 +2,7 @@
   (:require [bidi.bidi :as b]
             [clojure.tools.logging :as log]
             [org.httpkit.server :as hk]
-            [ow.app.lifecycle :as owl]))
+            #_[ow.app.lifecycle :as owl]))
 
 (defn- app-handler [{:keys [routes resources] :as this} req]
   (let [{:keys [handler]} (some-> (b/match-route routes (:uri req))
@@ -12,7 +12,7 @@
       {:status 404
        :body "resource not found"})))
 
-(defrecord Webapp [routes resources middleware httpkit-options
+#_(defrecord Webapp [routes resources middleware httpkit-options
                    server]
 
   owl/Lifecycle
@@ -32,7 +32,7 @@
       (server))
     (assoc this :server nil)))
 
-(defn webapp [routes resources & {:keys [middleware httpkit-options]}]
+#_(defn webapp [routes resources & {:keys [middleware httpkit-options]}]
   (map->Webapp {:routes routes
                 :resources resources
                 :middleware (or middleware identity)
