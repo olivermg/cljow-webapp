@@ -60,7 +60,13 @@
   {:lifecycles [{:start (fn [{:keys [config] :as this}]
                           (let [{:keys [middleware httpkit-options]} config
                                 server (hk/run-server (partial request-handler (middleware capturing-handler) this)
-                                                      httpkit-options)]))}]
+                                                      httpkit-options)]
+                            (assoc this ::server server)))
+
+                 :stop (fn [{:keys [::server] :as this}]
+                         (server :timeout 10000)
+                         (dissoc this ::server))}]
+
    :config     {:middleware      (or middleware identity)
                 :httpkit-options (merge {:port 8080
                                          :worker-name-prefix "webapp-async-worker-"}
