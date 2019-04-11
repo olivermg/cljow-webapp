@@ -14,32 +14,5 @@
          :body "resource not found"}))))
 
 (defn make-component [routes]
-  {:request-listener {:topic   :http/request
-                      :handler (make-handler routes)}})
-
-
-
-#_(do (require '[clojure.core.async :as a])
-    (require '[ow.webapp.async :as wa])
-    (let [request-ch  (a/chan)
-          routed-ch   (a/chan)
-
-          webapp      (-> (wa/construct request-ch)
-                          owl/start)
-
-          routes      ["/" [["foo" :foo]
-                            ["bar" :bar]]]
-          router      (-> (construct request-ch routed-ch routes)
-                          owl/start)]
-
-      (a/go-loop [{:keys [request response-ch] :as msg} (a/<! routed-ch)]
-        (when-not (nil? msg)
-          (println "got routed-request:" request)
-          (Thread/sleep 1000)
-          (a/put! response-ch {:status 201 :body "foobar"})
-          (recur (a/<! routed-ch))))
-      (Thread/sleep 15000)
-      (owl/stop router)
-      (owl/stop webapp)
-      (a/close! routed-ch)
-      (a/close! request-ch)))
+  {:ow.system/request-listener {:topic   :http/request
+                                :handler (make-handler routes)}})
