@@ -1,20 +1,21 @@
 (ns ow.webapp.async.router
   (:require [bidi.bidi :as b]
             [clojure.tools.logging :as log]
-            [ow.comm :as owc]
-            [ow.lifecycle :as owl]))
+            [ow.system :as ows]
+            [ow.system.request-listener :as osrl]))
 
-(defn- make-handler [out-ch routes]
+(defn- make-handler [routes]
   (fn handler [this http-request]
     (let [{:keys [uri]} http-request
           {:keys [handler]} (b/match-route routes uri)]
       (if handler
-        (owc/request out-ch http-request :topic handler)
+        (osrl/request this handler http-request)
         {:status 404
          :body "resource not found"}))))
 
-(defn construct [name in-ch out-ch routes]
-  (owc/construct name in-ch (make-handler out-ch routes)))
+(defn make-component [routes]
+  {:request-listener {:topic   :http/request
+                      :handler (make-handler routes)}})
 
 
 

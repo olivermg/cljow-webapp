@@ -2,10 +2,12 @@
   (:require [clojure.core.async :as a]
             [clojure.tools.logging :as log]
             [org.httpkit.server :as hk]
-            [ow.comm :as owc]
-            [ow.lifecycle :as owl]))
+            #_[ow.comm :as owc]
+            #_[ow.lifecycle :as owl]
+            [ow.system :as ows]
+            [ow.system.request-listener :as owsr]))
 
-(defn- request-handler [middleware-instance {:keys [::out-ch] :as this} http-req]
+(defn- request-handler [middleware-instance this http-req]
   (letfn [(handle-exception [req e]
             (log/debug "FAILED to process http request"
                        {:request req
@@ -20,7 +22,7 @@
         (try
           (let [http-req-after-middlewares (atom http-req)
                 _ (middleware-instance (assoc http-req ::captured-request http-req-after-middlewares))
-                response (owc/request out-ch @http-req-after-middlewares)]
+                response (owsr/request this :http/request @http-req-after-middlewares)]
             (log/trace "sending http response" response)
             (hk/send! ch (middleware-instance (assoc http-req ::captured-response response))))
           (catch Exception e
@@ -34,14 +36,14 @@
   (when captured-response
     captured-response))
 
-(defn construct [name out-ch & {:keys [middleware httpkit-options]}]
+#_(defn construct [name out-ch & {:keys [middleware httpkit-options]}]
   (owl/construct ::webapp name {::out-ch out-ch
                                 ::middleware (or middleware identity)
                                 ::httpkit-options (merge {:port 8080
                                                           :worker-name-prefix "async-webapp-worker-"}
                                                          httpkit-options)}))
 
-(defmethod owl/start* ::webapp [{:keys [::middleware ::httpkit-options ::server] :as this}]
+#_(defmethod owl/start* ::webapp [{:keys [::middleware ::httpkit-options ::server] :as this}]
   (if-not server
     (let [server (hk/run-server (partial request-handler (middleware capturing-handler) this)
                                 httpkit-options)]
@@ -49,10 +51,20 @@
       (assoc this ::server server))
     this))
 
-(defmethod owl/stop* ::webapp [{:keys [::server] :as this}]
+#_(defmethod owl/stop* ::webapp [{:keys [::server] :as this}]
   (when server
     (server))
-  (assoc this ::server nil))
+    (assoc this ::server nil))
+
+(defn make-component [& {:keys [middleware httpkit-options]}]
+  {:lifecycles [{:start (fn [{:keys [config] :as this}]
+                          (let [{:keys [middleware httpkit-options]} config
+                                server (hk/run-server (partial request-handler (middleware capturing-handler) this)
+                                                      httpkit-options)]))}]
+   :config     {:middleware      (or middleware identity)
+                :httpkit-options (merge {:port 8080
+                                         :worker-name-prefix "webapp-async-worker-"}
+                                        httpkit-options)}})
 
 
 
