@@ -56,21 +56,23 @@
     (server))
     (assoc this ::server nil))
 
-(defn make-component [& {:keys [middleware httpkit-options]}]
-  {:ow.system/lifecycles [{:start (fn [{:keys [config] :as this}]
-                                    (let [{:keys [middleware httpkit-options]} config
-                                          server (hk/run-server (partial request-handler (middleware capturing-handler) this)
-                                                                httpkit-options)]
-                                      (assoc this ::server server)))
+(defn make-lifecycle [& {:keys [middleware httpkit-options]}]
+  (let [middleware      (or middleware identity)
+        httpkit-options (merge {:port 8080
+                                :worker-name-prefix "webapp-async-worker-"}
+                               httpkit-options)]
 
-                           :stop (fn [{:keys [::server] :as this}]
-                                   (server :timeout 10000)
-                                   (dissoc this ::server))}]
+    (letfn [(start [this]
+              (let [server (hk/run-server (partial request-handler (middleware capturing-handler) this)
+                                          httpkit-options)]
+                (assoc this ::server server)))
 
-   :config     {:middleware      (or middleware identity)
-                :httpkit-options (merge {:port 8080
-                                         :worker-name-prefix "webapp-async-worker-"}
-                                        httpkit-options)}})
+            (stop [{:keys [::server] :as this}]
+              (server :timeout 10000)
+              (dissoc this ::server))]
+
+      {:start start
+       :stop stop})))
 
 
 
