@@ -8,10 +8,12 @@
             [ow.system.request-listener :as owsr]))
 
 (defn- request-handler [middleware-instance this http-req]
-  (letfn [(handle-exception [req e]
+  (letfn [(handle-exception [req ch e]
             (log/debug "FAILED to process http request"
                        {:request req
                         :error   e})
+            (hk/send! ch (middleware-instance (assoc http-req ::captured-response {:status (get (ex-data e) :status 500)
+                                                                                   :body   {:error (str e)}})))
             (throw e))]
 
     (hk/with-channel http-req ch
@@ -26,9 +28,9 @@
             (log/trace "sending http response" response)
             (hk/send! ch (middleware-instance (assoc http-req ::captured-response response))))
           (catch Exception e
-            (handle-exception http-req e))
+            (handle-exception http-req ch e))
           (catch Error e
-            (handle-exception http-req e)))))))
+            (handle-exception http-req ch e)))))))
 
 (defn- capturing-handler [{:keys [::captured-request ::captured-response] :as req}]
   (when captured-request
