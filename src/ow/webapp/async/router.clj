@@ -7,9 +7,9 @@
 (defn- make-handler [routes]
   (fn handler [this http-request]
     (let [{:keys [uri]} http-request
-          {:keys [handler]} (b/match-route routes uri)]
+          {:keys [route-params handler]} (b/match-route routes uri)]
       (if handler
-        (osrl/request this handler http-request)
+        (osrl/request this handler (assoc http-request :route-params route-params))
         {:status 404
          :body "resource not found"}))))
 
