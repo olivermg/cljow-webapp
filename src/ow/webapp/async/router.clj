@@ -5,14 +5,14 @@
             [ow.system.request-listener :as osrl]))
 
 (defn- make-handler [routes]
-  (fn handler [this http-request]
-    (let [{:keys [uri]} http-request
+  (fn handler [this {:keys [http/request]}]
+    (let [{:keys [uri]} request
           {:keys [route-params handler]} (b/match-route routes uri)]
       (if handler
-        (osrl/request this handler (assoc http-request :route-params route-params))
+        (osrl/request this handler (assoc request :route-params route-params))
         {:status 404
          :body "resource not found"}))))
 
 (defn make-component [routes]
-  {:ow.system/request-listener {:topic   :http/request
+  {:ow.system/request-listener {:topics  #{:http/request}
                                 :handler (make-handler routes)}})
