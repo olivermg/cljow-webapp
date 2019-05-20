@@ -13,7 +13,7 @@
                  [cljow-app "0.1.0-SNAPSHOT"]
                  [com.cognitect/transit-clj "0.8.313"]
                  [com.fasterxml.jackson.core/jackson-databind "2.9.8"]  ;; to remove ambiguous dependencies
-                 [http-kit "2.3.0"]
+                 [http-kit "2.4.0-alpha4"]
                  [io.clojure/liberator-transit "0.3.1" :exclusions [com.cognitect/transit-clj]]
                  [liberator "0.15.2"]
                  [metosin/muuntaja "0.6.3"]
