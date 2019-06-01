@@ -22,4 +22,6 @@
                  [org.clojure/tools.logging "0.4.1"]
                  [ring/ring-defaults "0.3.2"]]
 
-  :profiles {:dev {:dependencies [[org.apache.logging.log4j/log4j-core "2.11.2"]]}})
+  :profiles {:dev {:dependencies [[org.apache.logging.log4j/log4j-core "2.11.2"]]}}
+
+  :pedantic? :abort)
