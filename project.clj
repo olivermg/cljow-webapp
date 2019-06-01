@@ -17,7 +17,7 @@
                  [io.clojure/liberator-transit "0.3.1" :exclusions [com.cognitect/transit-clj]]
                  [liberator "0.15.2"]
                  [metosin/muuntaja "0.6.3"]
-                 [org.clojure/clojure "1.10.0"]
+                 [org.clojure/clojure "1.10.0" :scope "provided"]
                  [org.clojure/core.async "0.4.490"]
                  [org.clojure/tools.logging "0.4.1"]
                  [ring/ring-defaults "0.3.2"]]
