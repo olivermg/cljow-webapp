@@ -24,4 +24,15 @@
 
   :profiles {:dev {:dependencies [[org.apache.logging.log4j/log4j-core "2.11.2"]]}}
 
-  :pedantic? :abort)
+  :pedantic? :abort
+
+  :release-tasks [["vcs" "assert-committed"]
+                  ["change" "version" "leiningen.release/bump-version" "release"]
+                  ["vcs" "commit"]
+                  ["vcs" "tag"]
+                  ["deploy" "clojars"]
+                  #_["clean"]
+                  #_["uberjar"]
+                  ["change" "version" "leiningen.release/bump-version"]
+                  ["vcs" "commit"]
+                  #_["vcs" "push"]])
