@@ -6,6 +6,7 @@
 
 (defn- make-handler [routes]
   (fn handler [this {:keys [http/request]}]
+    ;;; TODO: remember to keep handlers idempotent, as they may be retried by the framework
     (let [{:keys [uri]} request
           {:keys [route-params handler]} (b/match-route routes uri)]
       (if handler
