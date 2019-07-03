@@ -1,6 +1,6 @@
 (ns ow.webapp.async
   (:require [clojure.core.async :as a]
-            [clojure.tools.logging :as log]
+            [ow.logging.api.alpha :as log]
             [org.httpkit.server :as hk]
             #_[ow.comm :as owc]
             #_[ow.lifecycle :as owl]
@@ -17,15 +17,15 @@
             (throw e))]
 
     (hk/with-channel http-req ch
-      (log/trace "received http request" http-req)
+      (log/trace "received http request" {:request http-req})
       (hk/on-close ch (fn [status]
-                        (log/trace "channel closed with status" status)))
+                        (log/trace "channel closed with status" {:status status})))
       (future
         (try
           (let [http-req-after-middlewares (atom http-req)
                 _ (middleware-instance (assoc http-req ::captured-request http-req-after-middlewares))
                 response (owsr/request this :http/request @http-req-after-middlewares)]
-            (log/trace "sending http response" response)
+            (log/trace "sending http response" {:response response})
             (hk/send! ch (middleware-instance (assoc http-req ::captured-response response))))
           (catch Exception e
             (handle-exception http-req ch e))
@@ -49,7 +49,7 @@
   (if-not server
     (let [server (hk/run-server (partial request-handler (middleware capturing-handler) this)
                                 httpkit-options)]
-      (log/info "started async webapp" httpkit-options)
+      (log/info "started async webapp" {:httpkit-options httpkit-options})
       (assoc this ::server server))
     this))
 

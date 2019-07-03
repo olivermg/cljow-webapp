@@ -1,6 +1,7 @@
 (ns ow.webapp.sync
   (:require [bidi.bidi :as b]
-            [clojure.tools.logging :as log]
+            #_[clojure.tools.logging :as log]
+            [ow.logging.api.alpha :as log]
             [org.httpkit.server :as hk]
             #_[ow.app.lifecycle :as owl]))
 

@@ -11,6 +11,7 @@
                  [bk/ring-gzip "0.3.0"]
                  [buddy "2.0.0"]
                  [cljow-app "0.1.0-SNAPSHOT"]
+                 [cljow-log "0.1.2-SNAPSHOT"]
                  [com.cognitect/transit-clj "0.8.313"]
                  [com.fasterxml.jackson.core/jackson-databind "2.9.8"]  ;; to remove ambiguous dependencies
                  [http-kit "2.4.0-alpha4"]
@@ -19,7 +20,7 @@
                  [metosin/muuntaja "0.6.3"]
                  [org.clojure/clojure "1.10.0" :scope "provided"]
                  [org.clojure/core.async "0.4.490"]
-                 [org.clojure/tools.logging "0.4.1"]
+                 #_[org.clojure/tools.logging "0.4.1"]
                  [ring/ring-defaults "0.3.2"]]
 
   :profiles {:dev {:dependencies [[org.apache.logging.log4j/log4j-core "2.11.2"]]}}

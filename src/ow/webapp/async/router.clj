@@ -1,6 +1,7 @@
 (ns ow.webapp.async.router
   (:require [bidi.bidi :as b]
-            [clojure.tools.logging :as log]
+            #_[clojure.tools.logging :as log]
+            [ow.logging.api.alpha :as log]
             [ow.system :as ows]
             [ow.system.request-listener :as osrl]))
 
